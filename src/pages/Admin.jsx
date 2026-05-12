@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaLock } from 'react-icons/fa';
 import productsData from '../data/products';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 const ADMIN_EMAIL = 'kcommando89@gmail.com';
 const ADMIN_PASSWORD = 'kc@986kc';
@@ -40,34 +41,68 @@ function Admin() {
   const [newOrder, setNewOrder] = useState(initialOrderState);
 
   useEffect(() => {
-    const storedProducts = localStorage.getItem('roastedCocoaProducts');
-    const storedOrders = localStorage.getItem('roastedCocoaOrders');
     const storedAuth = localStorage.getItem('roastedCocoaAdminAuth');
+    const loggedIn = storedAuth === 'true';
 
-    setProducts(storedProducts ? JSON.parse(storedProducts) : productsData);
-    setOrders(storedOrders ? JSON.parse(storedOrders) : []);
-    setIsLoggedIn(storedAuth === 'true');
+    setIsLoggedIn(loggedIn);
+    setProducts(productsData);
+    setOrders([]);
+
+    if (loggedIn) {
+      loadRemoteData();
+    }
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('roastedCocoaProducts', JSON.stringify(products));
-  }, [products]);
+  const loadRemoteData = async () => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
 
-  useEffect(() => {
-    localStorage.setItem('roastedCocoaOrders', JSON.stringify(orders));
-  }, [orders]);
+    try {
+      const { data: remoteProducts, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (productsError) {
+        throw productsError;
+      }
+
+      if (Array.isArray(remoteProducts) && remoteProducts.length > 0) {
+        setProducts(remoteProducts);
+      }
+    } catch (error) {
+      console.error('Failed to load remote products:', error);
+    }
+
+    try {
+      const { data: remoteOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (ordersError) {
+        throw ordersError;
+      }
+
+      setOrders(Array.isArray(remoteOrders) ? remoteOrders : []);
+    } catch (error) {
+      console.error('Failed to load remote orders:', error);
+    }
+  };
 
   const handleLoginChange = (field, value) => {
     setLoginForm((prev) => ({ ...prev, [field]: value }));
     setLoginError('');
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (loginForm.email === ADMIN_EMAIL && loginForm.password === ADMIN_PASSWORD) {
       setIsLoggedIn(true);
       setLoginError('');
       localStorage.setItem('roastedCocoaAdminAuth', 'true');
       setLoginForm(initialLoginState);
+      await loadRemoteData();
       return;
     }
 
@@ -102,27 +137,45 @@ function Admin() {
     setEditingProductId(null);
   };
 
-  const saveProduct = () => {
+  const saveProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.description || !newProduct.image) {
       return;
     }
 
+    const productToSave = {
+      id: editingProductId ? editingProductId : Date.now().toString(),
+      ...newProduct,
+    };
+
     if (editingProductId) {
+      if (isSupabaseConfigured) {
+        const { error } = await supabase
+          .from('products')
+          .update(productToSave)
+          .eq('id', editingProductId);
+
+        if (error) {
+          console.error('Failed to update product:', error);
+        }
+      }
+
       setProducts((prev) =>
         prev.map((item) =>
-          item.id === editingProductId ? { ...item, ...newProduct, id: editingProductId } : item,
+          item.id === editingProductId ? productToSave : item,
         ),
       );
       resetProductForm();
       return;
     }
 
-    const productToAdd = {
-      id: Date.now(),
-      ...newProduct,
-    };
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('products').insert(productToSave);
+      if (error) {
+        console.error('Failed to save product:', error);
+      }
+    }
 
-    setProducts((prev) => [productToAdd, ...prev]);
+    setProducts((prev) => [productToSave, ...prev]);
     resetProductForm();
   };
 
@@ -137,7 +190,14 @@ function Admin() {
     setPreviewImage(product.image);
   };
 
-  const removeProduct = (id) => {
+  const removeProduct = async (id) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) {
+        console.error('Failed to remove product:', error);
+      }
+    }
+
     setProducts((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -145,32 +205,61 @@ function Admin() {
     setNewOrder((prev) => ({ ...prev, [field]: value }));
   };
 
-  const submitOrder = () => {
+  const submitOrder = async () => {
     if (!newOrder.customerName || (!newOrder.email && !newOrder.phone) || !newOrder.product) {
       return;
     }
 
-    setOrders((prev) => [
-      {
-        id: Date.now(),
-        submittedAt: new Date().toISOString(),
-        delivered: false,
-        ...newOrder,
-      },
-      ...prev,
-    ]);
+    const orderToSave = {
+      id: Date.now().toString(),
+      submittedAt: new Date().toISOString(),
+      delivered: false,
+      ...newOrder,
+    };
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('orders').insert(orderToSave);
+      if (error) {
+        console.error('Failed to save order:', error);
+      }
+    }
+
+    setOrders((prev) => [orderToSave, ...prev]);
     setNewOrder(initialOrderState);
   };
 
-  const toggleOrderDelivered = (orderId) => {
+  const toggleOrderDelivered = async (orderId) => {
+    const orderItem = orders.find((order) => order.id === orderId);
+    if (!orderItem) return;
+
+    const updatedDelivered = !orderItem.delivered;
+
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ delivered: updatedDelivered })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Failed to update order delivered state:', error);
+      }
+    }
+
     setOrders((prev) =>
       prev.map((order) =>
-        order.id === orderId ? { ...order, delivered: !order.delivered } : order,
+        order.id === orderId ? { ...order, delivered: updatedDelivered } : order,
       ),
     );
   };
 
-  const clearOrders = () => {
+  const clearOrders = async () => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('orders').delete().neq('id', '');
+      if (error) {
+        console.error('Failed to clear orders:', error);
+      }
+    }
+
     setOrders([]);
   };
 
@@ -283,7 +372,7 @@ function Admin() {
                       value={newProduct.name}
                       onChange={(e) => handleProductChange('name', e.target.value)}
                       className="w-full rounded-3xl border border-espresso/10 bg-cream px-4 py-3 text-sm text-espresso outline-none transition focus:border-gold/70 focus:ring-2 focus:ring-gold/20"
-                      placeholder="Almond Chocolate"
+                      placeholder="Enter product Name"
                     />
                   </div>
                   <div>
