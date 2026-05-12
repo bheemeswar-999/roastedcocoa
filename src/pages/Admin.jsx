@@ -286,7 +286,7 @@ function Admin() {
                   value={loginForm.email}
                   onChange={(e) => handleLoginChange('email', e.target.value)}
                   className="w-full rounded-3xl border border-espresso/10 bg-cream px-4 py-3 text-sm text-espresso outline-none transition focus:border-gold/70 focus:ring-2 focus:ring-gold/20"
-                  placeholder="kcommando89@gmail.com"
+                  placeholder="Enter email address"
                 />
               </div>
               <div>
@@ -381,7 +381,7 @@ function Admin() {
                       value={newProduct.price}
                       onChange={(e) => handleProductChange('price', e.target.value)}
                       className="w-full rounded-3xl border border-espresso/10 bg-cream px-4 py-3 text-sm text-espresso outline-none transition focus:border-gold/70 focus:ring-2 focus:ring-gold/20"
-                      placeholder="₹480"
+                      placeholder="₹"
                     />
                   </div>
                   <div>
