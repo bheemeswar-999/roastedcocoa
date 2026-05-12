@@ -142,16 +142,21 @@ function Admin() {
       return;
     }
 
-    const productToSave = {
-      id: editingProductId ? editingProductId : Date.now().toString(),
-      ...newProduct,
-    };
-
     if (editingProductId) {
+      const productToSave = {
+        id: editingProductId,
+        ...newProduct,
+      };
+
       if (isSupabaseConfigured) {
         const { error } = await supabase
           .from('products')
-          .update(productToSave)
+          .update({
+            name: newProduct.name,
+            price: newProduct.price,
+            description: newProduct.description,
+            image: newProduct.image,
+          })
           .eq('id', editingProductId);
 
         if (error) {
@@ -168,14 +173,26 @@ function Admin() {
       return;
     }
 
+    const productToSave = {
+      ...newProduct,
+    };
+
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('products').insert(productToSave);
+      const { data, error } = await supabase.from('products').insert(productToSave).select();
       if (error) {
         console.error('Failed to save product:', error);
+      } else if (data && data.length > 0) {
+        setProducts((prev) => [data[0], ...prev]);
+        resetProductForm();
+        return;
       }
     }
 
-    setProducts((prev) => [productToSave, ...prev]);
+    const fallbackProduct = {
+      id: Date.now().toString(),
+      ...newProduct,
+    };
+    setProducts((prev) => [fallbackProduct, ...prev]);
     resetProductForm();
   };
 
