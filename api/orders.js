@@ -16,19 +16,19 @@ const toSnakeCaseOrder = ({
   submittedAt,
   delivered,
 }) => ({
-  customer_name: customerName,
+  customername: customerName,
   email,
   phone,
   product,
   message,
-  submitted_at: submittedAt,
+  submittedat: submittedAt,
   delivered,
 });
 
 const toCamelCaseOrder = (row) => ({
   ...row,
-  customerName: row.customer_name ?? row.customerName,
-  submittedAt: row.submitted_at ?? row.submittedAt,
+  customerName: row.customer_name ?? row.customername ?? row.customerName,
+  submittedAt: row.submitted_at ?? row.submittedat ?? row.submittedAt,
 });
 
 export default async function handler(req, res) {

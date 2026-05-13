@@ -98,8 +98,8 @@ function Admin() {
 
       const ordersData = (data ?? []).map((row) => ({
         ...row,
-        customerName: row.customer_name ?? row.customerName,
-        submittedAt: row.submitted_at ?? row.submittedAt,
+        customerName: row.customer_name ?? row.customername ?? row.customerName,
+        submittedAt: row.submitted_at ?? row.submittedat ?? row.submittedAt,
       }));
 
       setOrders(ordersData);
@@ -264,12 +264,12 @@ function Admin() {
         const { data, error } = await supabase
           .from('orders')
           .insert({
-            customer_name: orderToSave.customerName,
+            customername: orderToSave.customerName,
             email: orderToSave.email,
             phone: orderToSave.phone,
             product: orderToSave.product,
             message: orderToSave.message,
-            submitted_at: orderToSave.submittedAt,
+            submittedat: orderToSave.submittedAt,
             delivered: orderToSave.delivered,
           })
           .select();
@@ -280,8 +280,8 @@ function Admin() {
 
         const result = {
           ...data?.[0],
-          customerName: data?.[0]?.customer_name,
-          submittedAt: data?.[0]?.submitted_at,
+          customerName: data?.[0]?.customer_name ?? data?.[0]?.customername,
+          submittedAt: data?.[0]?.submitted_at ?? data?.[0]?.submittedat,
         };
 
         setOrders((prev) => [result, ...prev]);
