@@ -87,19 +87,17 @@ function Admin() {
     }
 
     try {
-      const { data: remoteOrders, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .order('id', { ascending: false });
+      const response = await fetch('/api/orders');
+      const ordersData = await response.json();
 
-      if (ordersError) {
-        throw ordersError;
+      if (!response.ok) {
+        throw ordersData;
       }
 
-      setOrders(Array.isArray(remoteOrders) ? remoteOrders : []);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
     } catch (error) {
       console.error('Failed to load remote orders:', error);
-      setRemoteError('Unable to load orders from Supabase. Check your database and environment variables.');
+      setRemoteError('Unable to load orders from Supabase. Check your deployment environment and service role key.');
     }
   };
 
@@ -254,12 +252,18 @@ function Admin() {
     };
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase.from('orders').insert(orderToSave).select();
-      if (error) {
-        console.error('Failed to save order:', error);
-        setOrderError('Unable to save order to Supabase. Check console or Supabase policies.');
-      } else if (data && data.length > 0) {
-        setOrders((prev) => [data[0], ...prev]);
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderToSave),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Failed to save order:', result);
+        setOrderError(result.error || 'Unable to save order to Supabase. Check console or Supabase policies.');
+      } else {
+        setOrders((prev) => [result, ...prev]);
         setNewOrder(initialOrderState);
         return;
       }
@@ -280,16 +284,16 @@ function Admin() {
     if (!orderItem) return;
 
     const updatedDelivered = !orderItem.delivered;
-    const supabaseId = orderItem.id;
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase
-        .from('orders')
-        .update({ delivered: updatedDelivered })
-        .eq('id', supabaseId);
-
-      if (error) {
-        console.error('Failed to update order delivered state:', error);
+      const response = await fetch(`/api/orders?id=${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delivered: updatedDelivered }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Failed to update order delivered state:', result);
       }
     }
 
@@ -302,9 +306,12 @@ function Admin() {
 
   const clearOrders = async () => {
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('orders').delete().neq('id', '');
-      if (error) {
-        console.error('Failed to clear orders:', error);
+      const response = await fetch('/api/orders', {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Failed to clear orders:', result);
       }
     }
 
