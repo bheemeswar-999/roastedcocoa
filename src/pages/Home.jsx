@@ -192,33 +192,24 @@ function Home() {
               <div className="mt-16 rounded-[2rem] border border-espresso/10 bg-white p-10 shadow-premium">
                 <div className="mb-8 text-center">
                   <p className="text-sm uppercase tracking-[0.35em] text-cocoa/70">Customer reviews</p>
-                  <h3 className="text-3xl font-semibold text-espresso">What our customers are saying</h3>
+                  <h3 className="text-3xl font-semibold text-espresso">Anyone can leave a review</h3>
+                  <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-espresso/75">
+                    Share your experience with our handcrafted chocolates and gift hampers. Your feedback helps us create even more memorable treats.
+                  </p>
                 </div>
-                <div className="grid gap-6 md:grid-cols-3">
-                  {[
-                    {
-                      quote: 'The chocolates arrived beautifully packaged and tasted incredible. Perfect for gifting!',
-                      name: 'Ananya R.',
-                    },
-                    {
-                      quote: 'I ordered a custom name hamper and it exceeded expectations. Great service and quality.',
-                      name: 'Rahul M.',
-                    },
-                    {
-                      quote: 'Amazing flavors and fast delivery. My family loved the premium touch and presentation.',
-                      name: 'Priya S.',
-                    },
-                  ].map((review) => (
-                    <div key={review.name} className="rounded-[1.75rem] border border-espresso/10 bg-cream p-6">
-                      <div className="mb-4 flex items-center gap-1 text-gold">
-                        {[...Array(5)].map((_, index) => (
-                          <FaStar key={index} className="h-4 w-4" />
-                        ))}
-                      </div>
-                      <p className="text-sm leading-7 text-espresso/80">{review.quote}</p>
-                      <p className="mt-6 text-sm font-semibold text-espresso">{review.name}</p>
-                    </div>
-                  ))}
+                <div className="flex flex-col items-center gap-4 md:flex-row md:justify-center">
+                  <Link
+                    to="/contact"
+                    className="inline-flex items-center justify-center rounded-full bg-espresso px-8 py-3 text-sm font-semibold uppercase tracking-[0.24em] text-cream transition hover:bg-espresso/95"
+                  >
+                    Leave a review
+                  </Link>
+                  <Link
+                    to="/products"
+                    className="inline-flex items-center justify-center rounded-full border border-espresso/10 bg-white px-8 py-3 text-sm font-semibold uppercase tracking-[0.24em] text-espresso transition hover:bg-espresso/5"
+                  >
+                    Browse products
+                  </Link>
                 </div>
               </div>
             </>
