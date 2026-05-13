@@ -3,13 +3,46 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaGift, FaLeaf, FaHeart } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
+import productsData from '../data/products';
 import { getStoredProducts } from '../utils/productStorage';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 function Home() {
   const [products, setProducts] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setProducts(getStoredProducts());
+    const loadProducts = async () => {
+      const storedProducts = getStoredProducts();
+
+      if (!isSupabaseConfigured) {
+        setProducts(storedProducts.length > 0 ? storedProducts : productsData);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('id', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to load products from Supabase:', error);
+        setError('Unable to load products from Supabase. Showing local cached products if available.');
+      }
+
+      setProducts(storedProducts.length > 0 ? storedProducts : productsData);
+    };
+
+    loadProducts();
   }, []);
 
   return (
@@ -93,6 +126,11 @@ function Home() {
 
       <section className="mx-auto max-w-7xl py-20 md:px-6">
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          {error && (
+            <div className="rounded-[2rem] border border-red-200 bg-red-50 p-6 text-sm text-red-700 shadow-premium">
+              {error}
+            </div>
+          )}
           <div className="space-y-6">
             <span className="inline-flex rounded-full bg-gold/10 px-4 py-2 text-xs uppercase tracking-[0.35em] text-cocoa">
               Premium collection

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaLock } from 'react-icons/fa';
 import productsData from '../data/products';
+import { getStoredProducts, setStoredProducts } from '../utils/productStorage';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 const ADMIN_EMAIL = 'kcommando89@gmail.com';
@@ -39,6 +40,8 @@ function Admin() {
   const [previewImage, setPreviewImage] = useState('');
   const [editingProductId, setEditingProductId] = useState(null);
   const [newOrder, setNewOrder] = useState(initialOrderState);
+  const [remoteError, setRemoteError] = useState('');
+  const [orderError, setOrderError] = useState('');
 
   useEffect(() => {
     const storedAuth = localStorage.getItem('roastedCocoaAdminAuth');
@@ -53,10 +56,19 @@ function Admin() {
     }
   }, []);
 
+  useEffect(() => {
+    if (products.length > 0) {
+      setStoredProducts(products);
+    }
+  }, [products]);
+
   const loadRemoteData = async () => {
     if (!isSupabaseConfigured) {
+      setRemoteError('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
       return;
     }
+
+    setRemoteError('');
 
     try {
       const { data: remoteProducts, error: productsError } = await supabase
@@ -68,11 +80,10 @@ function Admin() {
         throw productsError;
       }
 
-      if (Array.isArray(remoteProducts) && remoteProducts.length > 0) {
-        setProducts(remoteProducts);
-      }
+      setProducts(Array.isArray(remoteProducts) ? remoteProducts : []);
     } catch (error) {
       console.error('Failed to load remote products:', error);
+      setRemoteError('Unable to load products from Supabase. Check your database and environment variables.');
     }
 
     try {
@@ -88,6 +99,7 @@ function Admin() {
       setOrders(Array.isArray(remoteOrders) ? remoteOrders : []);
     } catch (error) {
       console.error('Failed to load remote orders:', error);
+      setRemoteError('Unable to load orders from Supabase. Check your database and environment variables.');
     }
   };
 
@@ -220,12 +232,16 @@ function Admin() {
 
   const handleOrderChange = (field, value) => {
     setNewOrder((prev) => ({ ...prev, [field]: value }));
+    setOrderError('');
   };
 
   const submitOrder = async () => {
     if (!newOrder.customerName || (!newOrder.email && !newOrder.phone) || !newOrder.product) {
+      setOrderError('Please enter customer name, email or phone, and a selected product.');
       return;
     }
+
+    setOrderError('');
 
     const orderToSave = {
       customerName: newOrder.customerName,
@@ -241,11 +257,14 @@ function Admin() {
       const { data, error } = await supabase.from('orders').insert(orderToSave).select();
       if (error) {
         console.error('Failed to save order:', error);
+        setOrderError('Unable to save order to Supabase. Check console or Supabase policies.');
       } else if (data && data.length > 0) {
         setOrders((prev) => [data[0], ...prev]);
         setNewOrder(initialOrderState);
         return;
       }
+    } else {
+      setOrderError('Supabase is not configured. Order will be saved locally only.');
     }
 
     const fallbackOrder = {
@@ -261,24 +280,16 @@ function Admin() {
     if (!orderItem) return;
 
     const updatedDelivered = !orderItem.delivered;
-    const supabaseId = typeof orderId === 'string' && /^[0-9]+$/.test(orderId) ? Number(orderId) : orderId;
+    const supabaseId = orderItem.id;
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('orders')
         .update({ delivered: updatedDelivered })
-        .eq('id', supabaseId)
-        .select();
+        .eq('id', supabaseId);
 
       if (error) {
         console.error('Failed to update order delivered state:', error);
-      } else if (data && data.length > 0) {
-        setOrders((prev) =>
-          prev.map((order) =>
-            order.id === orderId ? { ...order, delivered: updatedDelivered } : order,
-          ),
-        );
-        return;
       }
     }
 
@@ -359,6 +370,11 @@ function Admin() {
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-cocoa/70">Admin panel</p>
               <h1 className="mt-3 text-4xl font-semibold text-espresso md:text-5xl">Manage products and customer orders</h1>
+              {remoteError && (
+                <div className="mt-4 rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {remoteError}
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -521,6 +537,11 @@ function Admin() {
                 </p>
 
                 <div className="mt-8 space-y-5">
+                  {orderError && (
+                    <div className="rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {orderError}
+                    </div>
+                  )}
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-espresso">Customer name</label>
                     <input

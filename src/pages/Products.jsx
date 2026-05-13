@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ProductCard from '../components/ProductCard';
+import productsData from '../data/products';
 import { getStoredProducts } from '../utils/productStorage';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -8,8 +9,10 @@ function Products() {
 
   useEffect(() => {
     const loadProducts = async () => {
+      const storedProducts = getStoredProducts();
+
       if (!isSupabaseConfigured) {
-        setProducts(getStoredProducts());
+        setProducts(storedProducts.length > 0 ? storedProducts : productsData);
         return;
       }
 
@@ -31,7 +34,7 @@ function Products() {
         console.error('Failed to load products from Supabase:', error);
       }
 
-      setProducts(getStoredProducts());
+      setProducts(storedProducts.length > 0 ? storedProducts : productsData);
     };
 
     loadProducts();
