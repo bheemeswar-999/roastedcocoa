@@ -228,20 +228,31 @@ function Admin() {
     }
 
     const orderToSave = {
-      id: Date.now().toString(),
+      customerName: newOrder.customerName,
+      email: newOrder.email,
+      phone: newOrder.phone,
+      product: newOrder.product,
+      message: newOrder.message,
       submittedAt: new Date().toISOString(),
       delivered: false,
-      ...newOrder,
     };
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('orders').insert(orderToSave);
+      const { data, error } = await supabase.from('orders').insert(orderToSave).select();
       if (error) {
         console.error('Failed to save order:', error);
+      } else if (data && data.length > 0) {
+        setOrders((prev) => [data[0], ...prev]);
+        setNewOrder(initialOrderState);
+        return;
       }
     }
 
-    setOrders((prev) => [orderToSave, ...prev]);
+    const fallbackOrder = {
+      id: Date.now().toString(),
+      ...orderToSave,
+    };
+    setOrders((prev) => [fallbackOrder, ...prev]);
     setNewOrder(initialOrderState);
   };
 
@@ -250,15 +261,24 @@ function Admin() {
     if (!orderItem) return;
 
     const updatedDelivered = !orderItem.delivered;
+    const supabaseId = typeof orderId === 'string' && /^[0-9]+$/.test(orderId) ? Number(orderId) : orderId;
 
     if (isSupabaseConfigured) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .update({ delivered: updatedDelivered })
-        .eq('id', orderId);
+        .eq('id', supabaseId)
+        .select();
 
       if (error) {
         console.error('Failed to update order delivered state:', error);
+      } else if (data && data.length > 0) {
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === orderId ? { ...order, delivered: updatedDelivered } : order,
+          ),
+        );
+        return;
       }
     }
 

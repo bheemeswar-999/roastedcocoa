@@ -4,40 +4,12 @@ import { Link } from 'react-router-dom';
 import { FaGift, FaLeaf, FaHeart } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
 import { getStoredProducts } from '../utils/productStorage';
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 function Home() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    const loadProducts = async () => {
-      if (!isSupabaseConfigured) {
-        setProducts(getStoredProducts());
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .order('id', { ascending: false });
-
-        if (error) {
-          throw error;
-        }
-
-        if (Array.isArray(data) && data.length > 0) {
-          setProducts(data);
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to load products from Supabase:', error);
-      }
-
-      setProducts(getStoredProducts());
-    };
-
-    loadProducts();
+    setProducts(getStoredProducts());
   }, []);
 
   return (
