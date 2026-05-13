@@ -20,6 +20,7 @@ const initialOrderState = {
   email: '',
   phone: '',
   product: '',
+  quantity: 1,
   message: '',
   delivered: false,
 };
@@ -242,8 +243,8 @@ function Admin() {
   };
 
   const submitOrder = async () => {
-    if (!newOrder.customerName || (!newOrder.email && !newOrder.phone) || !newOrder.product) {
-      setOrderError('Please enter customer name, email or phone, and a selected product.');
+    if (!newOrder.customerName || (!newOrder.email && !newOrder.phone) || !newOrder.product || !newOrder.quantity || newOrder.quantity < 1) {
+      setOrderError('Please enter customer name, email or phone, a selected product, and quantity.');
       return;
     }
 
@@ -254,6 +255,7 @@ function Admin() {
       email: newOrder.email,
       phone: newOrder.phone,
       product: newOrder.product,
+      quantity: newOrder.quantity,
       message: newOrder.message,
       submittedAt: new Date().toISOString(),
       delivered: false,
@@ -261,27 +263,45 @@ function Admin() {
 
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('orders')
-          .insert({
-            customername: orderToSave.customerName,
-            email: orderToSave.email,
-            phone: orderToSave.phone,
-            product: orderToSave.product,
-            message: orderToSave.message,
-            submittedat: orderToSave.submittedAt,
-            delivered: orderToSave.delivered,
-          })
-          .select();
+        const insertPayload = {
+          customername: orderToSave.customerName,
+          email: orderToSave.email,
+          phone: orderToSave.phone,
+          product: orderToSave.product,
+          message: orderToSave.message,
+          submittedat: orderToSave.submittedAt,
+          delivered: orderToSave.delivered,
+        };
 
-        if (error) {
-          throw error;
+        if (orderToSave.quantity != null) {
+          insertPayload.quantity = orderToSave.quantity;
+        }
+
+        let data;
+        try {
+          const insertResult = await supabase.from('orders').insert(insertPayload).select();
+          if (insertResult.error) {
+            throw insertResult.error;
+          }
+          data = insertResult.data;
+        } catch (insertError) {
+          if (insertError.message?.toLowerCase().includes('quantity')) {
+            delete insertPayload.quantity;
+            const retryResult = await supabase.from('orders').insert(insertPayload).select();
+            if (retryResult.error) {
+              throw retryResult.error;
+            }
+            data = retryResult.data;
+          } else {
+            throw insertError;
+          }
         }
 
         const result = {
           ...data?.[0],
           customerName: data?.[0]?.customer_name ?? data?.[0]?.customername,
           submittedAt: data?.[0]?.submitted_at ?? data?.[0]?.submittedat,
+          quantity: data?.[0]?.quantity ?? orderToSave.quantity,
         };
 
         setOrders((prev) => [result, ...prev]);
@@ -601,7 +621,7 @@ function Admin() {
                         value={newOrder.phone}
                         onChange={(e) => handleOrderChange('phone', e.target.value)}
                         className="w-full rounded-3xl border border-espresso/10 bg-cream px-4 py-3 text-sm text-espresso outline-none transition focus:border-gold/70 focus:ring-2 focus:ring-gold/20"
-                        placeholder="+91 93984 85037"
+                        placeholder="Enter phone number "
                       />
                     </div>
                   </div>
@@ -617,6 +637,32 @@ function Admin() {
                         <option key={product.id} value={product.name}>{product.name}</option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-espresso">Quantity</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOrderChange('quantity', Math.max(1, newOrder.quantity - 1))}
+                        className="h-12 w-12 rounded-full border border-espresso/10 bg-white text-xl font-semibold text-espresso transition hover:bg-espresso/5"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newOrder.quantity}
+                        onChange={(e) => handleOrderChange('quantity', Number(e.target.value) || 1)}
+                        className="w-24 rounded-3xl border border-espresso/10 bg-cream px-4 py-3 text-center text-sm text-espresso outline-none transition focus:border-gold/70 focus:ring-2 focus:ring-gold/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleOrderChange('quantity', newOrder.quantity + 1)}
+                        className="h-12 w-12 rounded-full border border-espresso/10 bg-white text-xl font-semibold text-espresso transition hover:bg-espresso/5"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-espresso">Additional notes</label>
@@ -670,9 +716,10 @@ function Admin() {
                               {new Date(order.submittedAt).toLocaleString()}
                             </div>
                           </div>
-                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
                             <p><span className="font-semibold text-espresso">Email:</span> {order.email || '—'}</p>
                             <p><span className="font-semibold text-espresso">Phone:</span> {order.phone || '—'}</p>
+                            <p><span className="font-semibold text-espresso">Quantity:</span> {order.quantity ?? 1}</p>
                           </div>
                           <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] ${

@@ -2,7 +2,10 @@ import { motion } from 'framer-motion';
 import { FaWhatsapp } from 'react-icons/fa';
 
 function ProductCard({ product }) {
-  const whatsappUrl = `https://wa.me/919963781985?text=${encodeURIComponent(product.whatsappMessage)}`;
+  const whatsappMessage = product.whatsappMessage ||
+    `Hi! I'd like to order "${product.name}"${product.price ? ` for ${product.price}` : ''}. Please confirm availability and quantity options.`;
+
+  const whatsappUrl = `https://wa.me/919963781985?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
     <motion.article

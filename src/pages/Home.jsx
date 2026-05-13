@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FaGift, FaLeaf, FaHeart } from 'react-icons/fa';
+import { FaGift, FaLeaf, FaHeart, FaStar } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
 import productsData from '../data/products';
 import { getStoredProducts } from '../utils/productStorage';
@@ -173,11 +173,55 @@ function Home() {
             <h2 className="text-3xl font-semibold text-espresso md:text-4xl">A glimpse of our chocolate collection</h2>
           </div>
           {products.length ? (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {products.slice(0, 3).map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {products.slice(0, 3).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              <div className="mt-10 text-center">
+                <Link
+                  to="/products"
+                  className="inline-flex items-center justify-center rounded-full bg-espresso px-8 py-3 text-sm font-semibold uppercase tracking-[0.24em] text-cream transition hover:bg-espresso/95"
+                >
+                  View all products
+                </Link>
+              </div>
+
+              <div className="mt-16 rounded-[2rem] border border-espresso/10 bg-white p-10 shadow-premium">
+                <div className="mb-8 text-center">
+                  <p className="text-sm uppercase tracking-[0.35em] text-cocoa/70">Customer reviews</p>
+                  <h3 className="text-3xl font-semibold text-espresso">What our customers are saying</h3>
+                </div>
+                <div className="grid gap-6 md:grid-cols-3">
+                  {[
+                    {
+                      quote: 'The chocolates arrived beautifully packaged and tasted incredible. Perfect for gifting!',
+                      name: 'Ananya R.',
+                    },
+                    {
+                      quote: 'I ordered a custom name hamper and it exceeded expectations. Great service and quality.',
+                      name: 'Rahul M.',
+                    },
+                    {
+                      quote: 'Amazing flavors and fast delivery. My family loved the premium touch and presentation.',
+                      name: 'Priya S.',
+                    },
+                  ].map((review) => (
+                    <div key={review.name} className="rounded-[1.75rem] border border-espresso/10 bg-cream p-6">
+                      <div className="mb-4 flex items-center gap-1 text-gold">
+                        {[...Array(5)].map((_, index) => (
+                          <FaStar key={index} className="h-4 w-4" />
+                        ))}
+                      </div>
+                      <p className="text-sm leading-7 text-espresso/80">{review.quote}</p>
+                      <p className="mt-6 text-sm font-semibold text-espresso">{review.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           ) : (
             <div className="rounded-[2rem] border border-espresso/10 bg-white p-10 text-center text-espresso/75 shadow-premium">
               <p className="text-xl font-semibold">No featured products yet.</p>
