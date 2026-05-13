@@ -7,6 +7,30 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: { persistSession: false },
 });
 
+const toSnakeCaseOrder = ({
+  customerName,
+  email,
+  phone,
+  product,
+  message,
+  submittedAt,
+  delivered,
+}) => ({
+  customer_name: customerName,
+  email,
+  phone,
+  product,
+  message,
+  submitted_at: submittedAt,
+  delivered,
+});
+
+const toCamelCaseOrder = (row) => ({
+  ...row,
+  customerName: row.customer_name ?? row.customerName,
+  submittedAt: row.submitted_at ?? row.submittedAt,
+});
+
 export default async function handler(req, res) {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return res.status(500).json({ error: 'Supabase service role key is not configured.' });
@@ -18,16 +42,17 @@ export default async function handler(req, res) {
       if (error) {
         throw error;
       }
-      return res.status(200).json(data ?? []);
+      return res.status(200).json((data ?? []).map(toCamelCaseOrder));
     }
 
     if (req.method === 'POST') {
       const order = req.body;
-      const { data, error } = await supabase.from('orders').insert(order).select();
+      const orderToInsert = toSnakeCaseOrder(order);
+      const { data, error } = await supabase.from('orders').insert(orderToInsert).select();
       if (error) {
         throw error;
       }
-      return res.status(200).json(data?.[0] ?? null);
+      return res.status(200).json(toCamelCaseOrder(data?.[0] ?? {}));
     }
 
     if (req.method === 'PATCH') {
@@ -36,11 +61,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Order id is required for updates.' });
       }
       const updates = req.body;
-      const { data, error } = await supabase.from('orders').update(updates).eq('id', orderId).select();
+      const updateData = toSnakeCaseOrder(updates);
+      const { data, error } = await supabase.from('orders').update(updateData).eq('id', orderId).select();
       if (error) {
         throw error;
       }
-      return res.status(200).json(data?.[0] ?? null);
+      return res.status(200).json(toCamelCaseOrder(data?.[0] ?? {}));
     }
 
     if (req.method === 'DELETE') {

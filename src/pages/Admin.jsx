@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaLock } from 'react-icons/fa';
+import { createClient } from '@supabase/supabase-js';
 import productsData from '../data/products';
 import { getStoredProducts, setStoredProducts } from '../utils/productStorage';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+
+// Create a service role client for orders (only for local development)
+const supabaseService = isSupabaseConfigured && import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ? createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+) : null;
 
 const ADMIN_EMAIL = 'kcommando89@gmail.com';
 const ADMIN_PASSWORD = 'kc@986kc';
@@ -87,11 +95,28 @@ function Admin() {
     }
 
     try {
-      const response = await fetch('/api/orders');
-      const ordersData = await response.json();
+      // Try API first (for production), fall back to direct Supabase (for local dev)
+      let ordersData;
+      try {
+        const response = await fetch('/api/orders');
+        if (response.ok) {
+          ordersData = await response.json();
+        }
+      } catch (apiError) {
+        console.log('API not available, using direct Supabase calls');
+      }
 
-      if (!response.ok) {
-        throw ordersData;
+      if (!ordersData && supabaseService) {
+        const { data, error } = await supabaseService
+          .from('orders')
+          .select('*')
+          .order('id', { ascending: false });
+        if (error) throw error;
+        ordersData = (data ?? []).map(row => ({
+          ...row,
+          customerName: row.customer_name ?? row.customerName,
+          submittedAt: row.submitted_at ?? row.submittedAt,
+        }));
       }
 
       setOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -252,23 +277,51 @@ function Admin() {
     };
 
     if (isSupabaseConfigured) {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderToSave),
-      });
-      const result = await response.json();
+      try {
+        // Try API first (for production), fall back to direct Supabase (for local dev)
+        let result;
+        try {
+          const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderToSave),
+          });
+          if (response.ok) {
+            result = await response.json();
+          }
+        } catch (apiError) {
+          console.log('API not available, using direct Supabase calls');
+        }
 
-      if (!response.ok) {
-        console.error('Failed to save order:', result);
-        setOrderError(result.error || 'Unable to save order to Supabase. Check console or Supabase policies.');
-      } else {
-        setOrders((prev) => [result, ...prev]);
-        setNewOrder(initialOrderState);
+        if (!result && supabaseService) {
+          const orderToInsert = {
+            customer_name: orderToSave.customerName,
+            email: orderToSave.email,
+            phone: orderToSave.phone,
+            product: orderToSave.product,
+            message: orderToSave.message,
+            submitted_at: orderToSave.submittedAt,
+            delivered: orderToSave.delivered,
+          };
+          const { data, error } = await supabaseService.from('orders').insert(orderToInsert).select();
+          if (error) throw error;
+          result = {
+            ...data?.[0],
+            customerName: data?.[0]?.customer_name,
+            submittedAt: data?.[0]?.submitted_at,
+          };
+        }
+
+        if (result) {
+          setOrders((prev) => [result, ...prev]);
+          setNewOrder(initialOrderState);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to save order:', error);
+        setOrderError(error.message || 'Unable to save order to Supabase. Check console or Supabase policies.');
         return;
       }
-    } else {
-      setOrderError('Supabase is not configured. Order will be saved locally only.');
     }
 
     const fallbackOrder = {
@@ -286,14 +339,33 @@ function Admin() {
     const updatedDelivered = !orderItem.delivered;
 
     if (isSupabaseConfigured) {
-      const response = await fetch(`/api/orders?id=${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ delivered: updatedDelivered }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        console.error('Failed to update order delivered state:', result);
+      try {
+        // Try API first (for production), fall back to direct Supabase (for local dev)
+        let success = false;
+        try {
+          const response = await fetch(`/api/orders?id=${orderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ delivered: updatedDelivered }),
+          });
+          success = response.ok;
+        } catch (apiError) {
+          console.log('API not available, using direct Supabase calls');
+        }
+
+        if (!success && supabaseService) {
+          const { error } = await supabaseService
+            .from('orders')
+            .update({ delivered: updatedDelivered })
+            .eq('id', orderId);
+          if (!error) success = true;
+        }
+
+        if (!success) {
+          console.error('Failed to update order delivered state');
+        }
+      } catch (error) {
+        console.error('Failed to update order delivered state:', error);
       }
     }
 
@@ -306,12 +378,28 @@ function Admin() {
 
   const clearOrders = async () => {
     if (isSupabaseConfigured) {
-      const response = await fetch('/api/orders', {
-        method: 'DELETE',
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        console.error('Failed to clear orders:', result);
+      try {
+        // Try API first (for production), fall back to direct Supabase (for local dev)
+        let success = false;
+        try {
+          const response = await fetch('/api/orders', {
+            method: 'DELETE',
+          });
+          success = response.ok;
+        } catch (apiError) {
+          console.log('API not available, using direct Supabase calls');
+        }
+
+        if (!success && supabaseService) {
+          const { error } = await supabaseService.from('orders').delete().neq('id', '');
+          if (!error) success = true;
+        }
+
+        if (!success) {
+          console.error('Failed to clear orders');
+        }
+      } catch (error) {
+        console.error('Failed to clear orders:', error);
       }
     }
 
