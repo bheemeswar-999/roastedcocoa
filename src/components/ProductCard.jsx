@@ -1,11 +1,16 @@
 import { motion } from 'framer-motion';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp, FaStar } from 'react-icons/fa';
+import { getAverageRating, getReviewCount } from '../utils/reviewStorage';
 
-function ProductCard({ product }) {
+function ProductCard({ product, onReviewClick }) {
   const whatsappMessage = product.whatsappMessage ||
     `Hi! I'd like to order "${product.name}"${product.price ? ` for ${product.price}` : ''}. Please confirm availability and quantity options.`;
 
   const whatsappUrl = `https://wa.me/919963781985?text=${encodeURIComponent(whatsappMessage)}`;
+
+  const averageRating = getAverageRating(product.id);
+  const reviewCount = getReviewCount(product.id);
+
 
   return (
     <motion.article
@@ -25,6 +30,23 @@ function ProductCard({ product }) {
           <span className="rounded-full bg-gold/15 px-3 py-1 text-sm font-semibold text-cocoa">{product.price}</span>
         </div>
         <p className="text-sm leading-6 text-espresso/75">{product.description}</p>
+
+        {(averageRating > 0 || reviewCount > 0) && (
+          <div className="flex items-center gap-3 rounded-full bg-gold/10 px-3 py-2">
+            <div className="flex items-center gap-1">
+              {[...Array(5)].map((_, index) => (
+                <FaStar
+                  key={index}
+                  className={`h-3 w-3 ${index < Math.round(averageRating) ? 'text-gold' : 'text-gold/30'}`}
+                />
+              ))}
+            </div>
+            <span className="text-xs font-semibold text-espresso">
+              {averageRating} ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+            </span>
+          </div>
+        )}
+
         <a
           href={whatsappUrl}
           target="_blank"
@@ -33,6 +55,16 @@ function ProductCard({ product }) {
         >
           <FaWhatsapp className="text-green-400" /> Order on WhatsApp
         </a>
+
+        {onReviewClick && (
+          <button
+            type="button"
+            onClick={() => onReviewClick(product.id)}
+            className="inline-flex w-full items-center justify-center rounded-full border border-espresso/10 bg-white px-4 py-3 text-sm font-semibold uppercase tracking-[0.22em] text-espresso transition hover:bg-espresso/5"
+          >
+            Write a review
+          </button>
+        )}
       </div>
     </motion.article>
   );
