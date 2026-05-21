@@ -4,6 +4,7 @@ import { FaLock } from 'react-icons/fa';
 import productsData from '../data/products';
 import { getStoredProducts, setStoredProducts } from '../utils/productStorage';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import ChatBot from '../components/ChatBot';
 
 const ADMIN_EMAIL = 'kcommando89@gmail.com';
 const ADMIN_PASSWORD = 'kc@986kc';
@@ -752,6 +753,11 @@ function Admin() {
           )}
         </div>
       </section>
+      {isLoggedIn && (
+        <div className="fixed right-6 bottom-6 z-50">
+          <ChatBot />
+        </div>
+      )}
     </main>
   );
 }
