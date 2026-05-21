@@ -5,6 +5,7 @@ import { FaGift, FaLeaf, FaHeart, FaStar } from 'react-icons/fa';
 import ProductCard from '../components/ProductCard';
 import productsData from '../data/products';
 import { getStoredProducts } from '../utils/productStorage';
+import ChatBot from '../components/ChatBot';
 import { addProductReview, getProductReviews } from '../utils/reviewStorage';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -358,6 +359,10 @@ function Home() {
           </div>
         </div>
       )}
+      {/* Customer-facing chat widget */}
+      <div className="fixed right-6 bottom-6 z-50">
+        <ChatBot />
+      </div>
     </main>
   );
 }
