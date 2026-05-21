@@ -19,6 +19,7 @@ function Home() {
     comment: '',
   });
   const [productReviews, setProductReviews] = useState([]);
+  const [selectedProductForChat, setSelectedProductForChat] = useState(null);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -66,6 +67,10 @@ function Home() {
       ...prev,
       [name]: name === 'rating' ? Number(value) : value,
     }));
+  };
+
+  const handleProductChat = (product) => {
+    setSelectedProductForChat(product);
   };
 
   const handleSubmitReview = (e) => {
@@ -224,7 +229,12 @@ function Home() {
             <>
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {products.slice(0, 3).map((product) => (
-                  <ProductCard key={product.id} product={product} onReviewClick={handleReviewClick} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onReviewClick={handleReviewClick}
+                    onChatClick={() => handleProductChat(product)}
+                  />
                 ))}
               </div>
 

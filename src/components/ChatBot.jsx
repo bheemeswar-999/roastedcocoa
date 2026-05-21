@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaComments, FaTimes } from 'react-icons/fa';
 
-export default function ChatBot({ products = [] }) {
+export default function ChatBot({ products = [], selectedProduct = null }) {
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Hi — ask me about product composition, calories, or materials used.' },
   ]);
@@ -13,11 +13,12 @@ export default function ChatBot({ products = [] }) {
   const chatRef = useRef(null);
 
   const buildProductContext = () => {
-    if (!products || products.length === 0) {
+    const productList = selectedProduct ? [selectedProduct] : products;
+    if (!productList || productList.length === 0) {
       return '';
     }
 
-    return products.slice(0, 10).map((product) => {
+    return productList.slice(0, 10).map((product) => {
       const name = product.name || 'Unnamed product';
       const price = product.price ? `Price: ${product.price}` : 'Price unknown';
       const description = product.description ? product.description : 'No description provided.';
@@ -26,6 +27,12 @@ export default function ChatBot({ products = [] }) {
       return `• ${name}: ${price}. ${description}${calories ? ` ${calories}.` : ''}${materials ? ` ${materials}.` : ''}`;
     }).join('\n');
   };
+
+  useEffect(() => {
+    if (selectedProduct) {
+      setOpen(true);
+    }
+  }, [selectedProduct]);
 
   useEffect(() => {
     containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' });
@@ -111,7 +118,12 @@ export default function ChatBot({ products = [] }) {
       ) : (
         <div className="w-80 max-w-full rounded-2xl border border-espresso/10 bg-white shadow-lg">
           <div className="flex items-center justify-between rounded-t-2xl bg-espresso/5 px-4 py-3">
-            <div className="text-sm font-semibold text-espresso">Assistant</div>
+            <div>
+              <div className="text-sm font-semibold text-espresso">Assistant</div>
+              {selectedProduct && (
+                <div className="text-xs text-espresso/70">Product: {selectedProduct.name}</div>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <div className="text-xs text-espresso/70">Product knowledge</div>
               <button aria-label="Close chat" onClick={() => setOpen(false)} className="ml-2 text-espresso/70">
