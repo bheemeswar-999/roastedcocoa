@@ -14,8 +14,9 @@ export default async function handler(req, res) {
 
     const body = req.body || {};
     const userMessages = body.messages || [];
+    const productContext = body.productContext || '';
 
-    const systemPrompt = `You are a helpful assistant specializing in product composition, ingredients, materials, and calorie information. Answer user questions precisely, cite when uncertain, and ask clarifying questions if the question is ambiguous. Keep answers concise and factual.`;
+    const systemPrompt = `You are a helpful assistant specializing in product composition, ingredients, materials, and calorie information. Answer user questions precisely, cite when uncertain, and ask clarifying questions if the question is ambiguous. When product details are available, use them to provide accurate answers. ${productContext ? `Product details:\n${productContext}` : ''}`;
 
     const payload = {
       model: MODEL,

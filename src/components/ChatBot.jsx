@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaComments, FaTimes } from 'react-icons/fa';
 
-export default function ChatBot() {
+export default function ChatBot({ products = [] }) {
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Hi — ask me about product composition, calories, or materials used.' },
   ]);
@@ -10,10 +10,50 @@ export default function ChatBot() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
   const containerRef = useRef(null);
+  const chatRef = useRef(null);
+
+  const buildProductContext = () => {
+    if (!products || products.length === 0) {
+      return '';
+    }
+
+    return products.slice(0, 10).map((product) => {
+      const name = product.name || 'Unnamed product';
+      const price = product.price ? `Price: ${product.price}` : 'Price unknown';
+      const description = product.description ? product.description : 'No description provided.';
+      const calories = product.calories ? `Calories: ${product.calories}` : '';
+      const materials = product.materials ? `Materials: ${product.materials}` : '';
+      return `• ${name}: ${price}. ${description}${calories ? ` ${calories}.` : ''}${materials ? ` ${materials}.` : ''}`;
+    }).join('\n');
+  };
 
   useEffect(() => {
     containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleClickOutside = (event) => {
+      if (chatRef.current && !chatRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -28,10 +68,11 @@ export default function ChatBot() {
 
     try {
       const payloadMessages = [...messages, userMsg];
+      const productContext = buildProductContext();
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: payloadMessages }),
+        body: JSON.stringify({ messages: payloadMessages, productContext }),
       });
 
       const data = await res.json();
@@ -58,7 +99,7 @@ export default function ChatBot() {
   };
 
   return (
-    <div className="z-50">
+    <div className="z-50" ref={chatRef}>
       {!open ? (
         <button
           aria-label="Open chat"

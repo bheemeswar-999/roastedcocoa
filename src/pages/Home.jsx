@@ -361,7 +361,7 @@ function Home() {
       )}
       {/* Customer-facing chat widget */}
       <div className="fixed right-6 bottom-6 z-50">
-        <ChatBot />
+        <ChatBot products={products} />
       </div>
     </main>
   );
