@@ -7,6 +7,7 @@ import Products from './pages/Products';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Admin from './pages/Admin';
+import ChatBot from './components/ChatBot';
 
 function App() {
   return (
@@ -88,6 +89,9 @@ function App() {
         </Routes>
       </AnimatePresence>
       <Footer />
+      <div className="fixed right-6 bottom-6 z-50">
+        <ChatBot />
+      </div>
     </div>
   );
 }

@@ -753,11 +753,7 @@ function Admin() {
           )}
         </div>
       </section>
-      {isLoggedIn && (
-        <div className="fixed right-6 bottom-6 z-50">
-          <ChatBot />
-        </div>
-      )}
+      {/* Chat widget is rendered globally in App.jsx for customers */}
     </main>
   );
 }
